@@ -10,10 +10,10 @@ def main():
     data = data.split()
     data = list(map(lambda x: x.lower(), data))
     
-    # model = make_markov_model(1, data)
-    model = make_simple_markov_model(data)
+    size = 2
+    model = Chain(data, size)
     for i in range(40):
-        sentence = generate_random_sentence(random.randint(8, 24), model)
+        sentence = model.generate("вы сможете", chain_length=random.randint(8, 24), seed_length=size)
         print(sentence)
 
 if __name__ == "__main__":

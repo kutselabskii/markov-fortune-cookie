@@ -1,82 +1,55 @@
-# Thanks to https://tproger.ru/translations/markov-chains/
+# Adapted and modified code from https://github.com/StrikingLoo/ASOIAF-Markov/blob/master/ASOIAF.ipynb
 
-import random
+from random import random
 
+from scipy.sparse import dok_matrix
+import numpy as np
 
-class Dictogram(dict):
-    def __init__(self, iterable=None):
-        super(Dictogram, self).__init__()
-        self.types = 0
-        self.tokens = 0
-        if iterable:
-            self.update(iterable)
+class Chain:
+    def __init__(self, data, size):
+        self.size = size
+    
+        self.distinct_words = list(set(data))
+        word_idx_dict = {word: i for i, word in enumerate(self.distinct_words)}
+        
+        sets = [' '.join(data[i: i + self.size]) for i, _ in enumerate(data[:-self.size])]
 
-    def update(self, iterable):
-        for item in iterable:
-            if item in self:
-                self[item] += 1
-                self.tokens += 1
-            else:
-                self[item] = 1
-                self.types += 1
-                self.tokens += 1
+        sets_count = len(list(set(sets)))
+        self.dmatrix = dok_matrix((sets_count, len(self.distinct_words)))
 
-    def count(self, item):
-        if item in self:
-            return self[item]
-        return 0
+        distinct_sets = list(set(sets))
+        self.word_ids = {word: i for i, word in enumerate(distinct_sets)}
 
-    def return_random_word(self):
-        random_key = random.sample(self, 1)
-        return random_key[0]
-
-    def return_weighted_random_word(self):
-        random_int = random.randint(0, self.tokens-1)
-        index = 0
-        list_of_keys = list(self.keys())
-        for i in range(0, self.types):
-            index += self[list_of_keys[i]]
-            if(index > random_int):
-                return list_of_keys[i]
+        for i, word in enumerate(sets[:-self.size]):
+            word_sequence_idx = self.word_ids[word]
+            next_word_idx = word_idx_dict[data[i + self.size]]
+            self.dmatrix[word_sequence_idx, next_word_idx] += 1
 
 
-def make_markov_model(order, data):
-    markov_model = dict()
+    def sample_next_word_after_sequence(self, word_sequence, alpha = 0):
+        next_word_vector = self.dmatrix[self.word_ids[word_sequence]] + alpha
+        likelihoods = next_word_vector / next_word_vector.sum()
+        return self.weighted_choice(self.distinct_words, likelihoods.toarray())
 
-    for i in range(0, len(data)-order):
-        window = tuple(data[i: i+order])
-        if window in markov_model:
-            markov_model[window].update([data[i+order]])
-        else:
-            markov_model[window] = Dictogram([data[i+order]])
-    return markov_model
+    def weighted_choice(self, objects, weights):
+        weights = np.array(weights, dtype=np.float64)
+        sum_of_weights = weights.sum()
+        np.multiply(weights, 1 / sum_of_weights, weights)
+        weights = weights.cumsum()
+        x = random()
+        for i in range(len(weights)):
+            if x < weights[i]:
+                return objects[i]
+    
+    def generate(self, seed, chain_length=15, seed_length=2):
+        current_words = seed.split(' ')
+        if len(current_words) != seed_length:
+            raise ValueError(f'wrong number of words, expected {seed_length}')
+        sentence = seed
 
-def make_simple_markov_model(data):
-    markov_model = dict()
-
-    for i in range(0, len(data)-1):
-        if data[i] in markov_model:
-            markov_model[data[i]].update([data[i+1]])
-        else:
-            markov_model[data[i]] = Dictogram([data[i+1]])
-    return markov_model
-
-def generate_random_start(model):
-    if 'END' in model:
-        seed_word = 'END'
-        while seed_word == 'END':
-            seed_word = model['END'].return_weighted_random_word()
-        return seed_word
-    return random.choice(list(model.keys()))
-
-
-def generate_random_sentence(length, markov_model):
-    current_word = generate_random_start(markov_model)
-    sentence = [current_word]
-    for i in range(0, length):
-        current_dictogram = markov_model[current_word]
-        random_weighted_word = current_dictogram.return_weighted_random_word()
-        current_word = random_weighted_word
-        sentence.append(current_word)
-    sentence[0] = sentence[0].capitalize()
-    return ' '.join(sentence) + '.'
+        for _ in range(chain_length):
+            sentence += ' '
+            next_word = self.sample_next_word_after_sequence(' '.join(current_words))
+            sentence += next_word
+            current_words = current_words[1:]+[next_word]
+        return sentence
