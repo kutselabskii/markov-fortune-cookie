@@ -1,14 +1,16 @@
 # Adapted and modified code from https://github.com/StrikingLoo/ASOIAF-Markov/blob/master/ASOIAF.ipynb
 
 from random import random
+import json
+import os
 
-from scipy.sparse import dok_matrix
+from scipy.sparse import dok_matrix, save_npz, load_npz
 import numpy as np
 
 class Chain:
-    def __init__(self, data, size):
+    def create(self, data, size):
         self.size = size
-    
+
         self.distinct_words = list(set(data))
         word_idx_dict = {word: i for i, word in enumerate(self.distinct_words)}
         
@@ -51,5 +53,20 @@ class Chain:
             sentence += ' '
             next_word = self.sample_next_word_after_sequence(' '.join(current_words))
             sentence += next_word
-            current_words = current_words[1:]+[next_word]
+            current_words = current_words[1:] + [next_word]
         return sentence
+
+    def save(self, folder):
+        if not os.path.exists(folder):
+            os.mkdir(folder)
+        
+        save_npz(f"{folder}/matrix.npz", self.dmatrix.tocoo())
+        json.dump(self.word_ids, open(f"{folder}/ids.json", 'w', encoding='utf-8'), ensure_ascii=False)
+        json.dump(self.distinct_words, open(f"{folder}/words.json", 'w', encoding='utf-8'), ensure_ascii=False)
+        print(self.size, file=open(f"{folder}/size.txt", "w"))
+
+    def load(self, folder):
+        self.dmatrix = load_npz(f"{folder}/matrix.npz").todok()
+        self.word_ids = json.load(open(f"{folder}/ids.json", 'r', encoding='utf-8'))
+        self.distinct_words = json.load(open(f"{folder}/words.json", 'r', encoding='utf-8'))
+        self.size = int(open(f"{folder}/size.txt", 'r').read())
