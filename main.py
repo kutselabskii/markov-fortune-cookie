@@ -4,7 +4,7 @@ import pandas as pd
 
 def create_model(folder):
     data = open("predictions.txt", "r").read()
-    news = ' '.join(pd.read_csv("lenta-ru-news.csv", nrows=10000)["text"].tolist())
+    news = ' '.join(pd.read_csv("lenta-ru-news.csv", nrows=100000)["text"].tolist())
     data = data + news
 
     for symbol in ['\n', '\t', '\"', '\'']:
@@ -26,8 +26,8 @@ def load_model(folder):
     return model
 
 def main():
-    # model = create_model("big")
-    model = load_model("big")
+    model = create_model("bigger")
+    # model = load_model("big")
 
     for i in range(10):
         sentence = model.generate("судьба будет", chain_length=random.randint(8, 60), seed_length=model.size)
