@@ -148,3 +148,9 @@ dmypy.json
 cython_debug/
 
 *.xlsx
+
+*.zip
+*.csv
+bigger/
+big/
+model/
