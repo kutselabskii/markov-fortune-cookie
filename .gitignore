@@ -151,6 +151,5 @@ cython_debug/
 
 *.zip
 *.csv
-bigger/
 big/
 model/

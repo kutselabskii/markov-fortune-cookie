@@ -26,8 +26,8 @@ def load_model(folder):
     return model
 
 def main():
-    model = create_model("bigger")
-    # model = load_model("big")
+    # model = create_model("current_model")
+    model = load_model("current_model")
 
     for i in range(10):
         sentence = model.generate("судьба будет", chain_length=random.randint(8, 60), seed_length=model.size)
